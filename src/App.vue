@@ -6,6 +6,7 @@
           <v-alert type="success" v-if="addSuccess">Tache ajouté avec succes</v-alert>
           <v-alert type="info" v-if="removeSuccess">Tache supprimé avec succes</v-alert>
           <v-alert type="warning" v-if="confirmSuccess">Tache terminé !</v-alert>
+          <v-alert type="success" v-if="reAddTache">Tache réstauré !</v-alert>
         </v-col>
       </v-row>
 
@@ -17,7 +18,7 @@
                 <tr>
                   <th>Tâches en cours</th>
                   <th class="text-right">
-                    <v-btn small color="warning" class="mr-2" @click="enableAddBloc">
+                    <v-btn small color="warning" class="mr-2" @click="showOldList">
                       <i class="fas fa-ellipsis-h"></i>
                     </v-btn>
                     <v-btn small color="primary" @click="enableAddBloc">
@@ -27,16 +28,13 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="e in list" :key="e">
-                  <td class="text-left">{{ e }}</td>
+                <tr v-for="(el, index) in list" :key="index">
+                  <td class="text-left">{{ el }}</td>
                   <td class="text-right">
-                    <v-btn small color="success" class="mr-2" @click="confirmTache(e)">
+                    <v-btn small color="success" class="mr-2" @click="confirmTache(index)">
                       <i class="fa fa-check"></i>
                     </v-btn>
-                    <v-btn small color="warning" class="mr-2">
-                      <i class="fa fa-cog"></i>
-                    </v-btn>
-                    <v-btn small color="error" @click="removeTache(e)">
+                    <v-btn small color="error" @click="removeTache(index)">
                       <i class="fas fa-trash"></i>
                     </v-btn>
                   </td>
@@ -62,31 +60,30 @@
         </v-col>
       </v-row>
 
-      <v-card>
-        <v-simple-table>
-          <thead>
-            <tr>
-              <th>Tâches en cours</th>
-            </tr>
-          </thead>
-          <tbody v-if="oldListSuccess">
-            <tr v-for="el in oldList" :key="el">
-              <td class="text-left">{{ e }}</td>
-              <td class="text-right">
-                <v-btn small color="success" class="mr-2" @click="confirmTache(e)">
-                  <i class="fa fa-check"></i>
-                </v-btn>
-                <v-btn small color="warning" class="mr-2">
-                  <i class="fa fa-cog"></i>
-                </v-btn>
-                <v-btn small color="error" @click="removeTache(e)">
-                  <i class="fas fa-trash"></i>
-                </v-btn>
-              </td>
-            </tr>
-          </tbody>
-        </v-simple-table>
-      </v-card>
+      <v-simple-table v-if="oldListSuccess">
+        <thead>
+          <tr>
+            <th>Tâches terminées</th>
+            <th class="text-right">
+              <v-btn small color="error" @click="closeOldTache">
+                <i class="fa fa-times"></i>
+              </v-btn>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(el, index) in oldList" :key="index">
+            <td class="text-left">
+              <s>{{ el }}</s>
+            </td>
+            <td class="text-right">
+              <v-btn small color="warning" @click="restoreTache(index)">
+                <i class="fas fa-level-up-alt"></i>
+              </v-btn>
+            </td>
+          </tr>
+        </tbody>
+      </v-simple-table>
 
       <v-row class="text-center">
         <v-col>ToDoList - PiersantiDylan</v-col>
@@ -96,19 +93,24 @@
 </template>
 
 <script>
+const list = JSON.parse(localStorage.getItem("list")) || [];
+
 export default {
   name: "App",
 
   data: () => ({
-    list: [],
+    list,
     oldList: [],
     show: false,
     addSuccess: false,
     removeSuccess: false,
     confirmSuccess: false,
-    oldListSuccess: false
+    oldListSuccess: false,
+    reAddTache: false
   }),
-
+  create() {
+    localStorage.setItem("list", JSON.stringify(this.list));
+  },
   methods: {
     enableAddBloc: function() {
       this.show = true;
@@ -119,23 +121,48 @@ export default {
     },
 
     addTache: function() {
-      let newTache = document.getElementById("setTache").value;
-      this.list.push(newTache);
+      let newTache = document.getElementById("setTache");
+      this.list.push(newTache.value);
+      newTache.value = "";
       this.addSuccess = true;
       this.removeSuccess = false;
+      this.confirmSuccess = false;
+      this.reAddTache = false;
+      localStorage.setItem("list", JSON.stringify(this.list));
     },
 
-    removeTache: function(e) {
-      this.list.splice(e, 1);
+    removeTache: function(index) {
+      this.list.splice(index, 1);
       this.removeSuccess = true;
       this.addSuccess = false;
+      this.confirmSuccess = false;
+      this.reAddTache = false;
     },
 
-    confirmTache: function(e) {
-      this.oldList.push(this.list[e]);
-      this.list.splice(e, 1);
+    confirmTache: function(index) {
+      this.oldList.push(this.list[index]);
+      this.list.splice(index, 1);
       this.confirmSuccess = true;
+      this.removeSuccess = false;
       this.addSuccess = false;
+      this.reAddTache = false;
+    },
+
+    restoreTache: function(index) {
+      this.list.push(this.oldList[index]);
+      this.oldList.splice(index, 1);
+      this.confirmSuccess = false;
+      this.removeSuccess = false;
+      this.addSuccess = false;
+      this.reAddTache = true;
+    },
+
+    showOldList: function() {
+      this.oldListSuccess = true;
+    },
+
+    closeOldTache: function() {
+      this.oldListSuccess = false;
     }
   }
 };
